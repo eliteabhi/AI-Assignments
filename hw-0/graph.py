@@ -1,6 +1,8 @@
 # Add only your imports here
 import pandas as pd
 import numpy as np
+from PIL import Image
+from math import ceil
 from typing import Any, Tuple, Union
 
 # ----------------------------------------------------------------
@@ -39,7 +41,7 @@ class City():
         self.latitude: float = latitude
         
     def __str__( self ) -> str:
-        return f'Name: { self.name }, Latitude: { self.latitude }, Longitude: { self.longitude }'
+        return f'Name: { self.name }, Longitude: { self.longitude }, Latitude: { self.latitude }'
     
     def __repr__( self ) -> str:
         return f'{ self.__str__() }\n\n'
@@ -93,4 +95,46 @@ for i, rows in cities.iterrows():
     city_graph.insert( temp )
 
 print( city_graph )
+
+# ----------------------------------------------------------------
+
+# Setup Grid on Image
+
+max_longitude = cities.loc[ cities[ 'Longitude' ].idxmax() ][ 'Longitude' ]
+min_longitude = cities.loc[ cities[ 'Longitude' ].idxmin() ][ 'Longitude' ]
+
+max_latitude = cities.loc[ cities[ 'Latitude' ].idxmax() ][ 'Latitude' ]
+min_latitude = cities.loc[ cities[ 'Latitude' ].idxmin() ][ 'Latitude' ]
+
+orig_grid_x = ceil( max( abs( min_longitude ), abs( max_longitude ) ) ) * 2
+orig_grid_y = ceil( max( abs( min_latitude ), abs( max_latitude ) ) ) * 2
+
+print( f'Longitude: { min_longitude } - { max_longitude }\n\nLatitude: { min_latitude } - { max_latitude }\n' )
+
+def grid_from_image( path: str ) -> Tuple[ float, float ]:
+    img = Image.open( path )
+    width,height = img.size
+
+    print( f'Grid: { width } x { height }\n' )
+    
+    return width, height
+
+def coord_to_grid( coord: Tuple, orig_grid_size: Tuple, new_grid_size: Tuple ) -> Tuple[ int, int ]:
+    new_grid_x, new_grid_y = new_grid_size
+    orig_grid_x, orig_grid_y = orig_grid_size
+    x, y = coord
+
+    new_x: float = ( ( round( x ) + ( orig_grid_x / 2 ) ) / orig_grid_x ) * new_grid_x
+    new_y: float = ( ( round( y ) + ( orig_grid_y / 2 ) ) / orig_grid_y ) * new_grid_y
+    
+    return round( new_x ), round( new_y )
+
+map_grid = grid_from_image( fr'{ basePath }/cities-texas-map.png' )
+print( f'Orig grid: { ( orig_grid_x, orig_grid_y ) }\nNew Grid: { map_grid }\n' )
+
+for node in city_graph.graph:
+    translated_coord: Tuple = coord_to_grid( node.city.get_coords(), ( orig_grid_x, orig_grid_y ), map_grid )
+    
+    print(f'Node City:\n { node.city }\n New Coords: { translated_coord }')
+    
 
