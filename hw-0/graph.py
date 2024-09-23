@@ -80,6 +80,9 @@ class Graph():
     def get_node_by_name( self, name ) -> Union[ Node, None ]:
         return next( ( node for node in self.graph if node.city.name == name ), None )
 
+    def get_heuristic( self, node1: Node, node2: Node ) -> float:
+        return abs( node1.city.longitude - node2.city.longitude ) + abs( node1.city.latitude - node2.city.latitude )
+
 # ----------------------------------------------------------------
 
 # Populate Graph

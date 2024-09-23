@@ -69,5 +69,37 @@ def uninformed_bfs( virus: Virus, cities_graph: Graph ) -> None:
 virus1: Virus = Virus( name='Ligma', starting_city='Three Rivers' )
 print()
 uninformed_bfs( virus1, city_graph )
+print()
 
-print( f'\nVirus `{ virus1.name }` should travel { total_distance } miles')
+# ----------------------------------------------------------------
+
+import heapq
+
+# ----------------------------------------------------------------
+
+# Informed search
+
+def informed_Astar(starting_city: str, ending_city: str, cities_graph: Graph ) -> None:
+    queue: list = [ ( 0, starting_city, [ starting_city ] ) ]
+    cost_so_far: dict = { starting_city: 0 }
+
+    while queue:
+        _, current_city, path = heapq.heappop( queue )
+        print( f'At { current_city }' )
+
+        if current_city == ending_city:
+            break
+
+        for neighbor, distance in cities_graph.get_node_by_name( current_city ).get_routes().items():
+            tentative_cost = cost_so_far[ current_city ] + distance
+
+            if neighbor not in cost_so_far or tentative_cost < cost_so_far[ neighbor ]:
+                cost_so_far[ neighbor ] = tentative_cost
+                priority = tentative_cost + cities_graph.get_heuristic( cities_graph.get_node_by_name( neighbor ), cities_graph.get_node_by_name( ending_city ) )
+                heapq.heappush( queue, ( priority, neighbor, path + [neighbor] ) )
+
+    print( f'\nThe shortest path from { starting_city } to { ending_city } is { cost_so_far[ ending_city ] } miles long' )
+    print( f'The route to take is { path }' )
+
+informed_Astar( starting_city='San Antonio', ending_city='College Station', cities_graph=city_graph )
+
