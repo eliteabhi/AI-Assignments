@@ -1,6 +1,11 @@
 # Add only your imports here
 import pandas as pd
 import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+from matplotlib.animation import FuncAnimation
+import time
 from PIL import Image
 from math import ceil
 from typing import Any, Tuple, Union
@@ -11,6 +16,8 @@ from typing import Any, Tuple, Union
 
 basePath = r"/content/drive/My Drive/Colab Notebooks/Artificial Intelligence/Data"
 basePath = r"."
+
+TEXAS_MAP: str = rf'{basePath}/cities-texas-map.png'
 
 map_grid = ( 22 * 10, 9 * 10 )
 
@@ -113,43 +120,25 @@ print( city_graph )
 
 # Setup Grid on Image
 
-max_longitude = cities.loc[ cities[ 'Longitude' ].idxmax() ][ 'Longitude' ]
-min_longitude = cities.loc[ cities[ 'Longitude' ].idxmin() ][ 'Longitude' ]
+def setup_plot() -> None:
+    # Visualize Graph
+    G = nx.Graph()
 
-max_latitude = cities.loc[ cities[ 'Latitude' ].idxmax() ][ 'Latitude' ]
-min_latitude = cities.loc[ cities[ 'Latitude' ].idxmin() ][ 'Latitude' ]
+    for index, row in city_routes.iterrows():
+        G.add_edge( row[ 'City_From' ], row[ 'City_To' ], weight=row[ 'Distance' ] )
 
-orig_grid_x = ceil( max( abs( min_longitude ), abs( max_longitude ) ) ) * 2
-orig_grid_y = ceil( max( abs( min_latitude ), abs( max_latitude ) ) ) * 2
+    pos = nx.spring_layout(G)
+# nx.draw( G, pos, with_labels=True, node_size=300, node_color='skyblue', font_size=5, font_color='black' )
 
-print( f'Longitude: { min_longitude } - { max_longitude }\n\nLatitude: { min_latitude } - { max_latitude }\n' )
+    image = mpimg.imread( TEXAS_MAP )
 
-def grid_from_image( path: str ) -> Tuple[ float, float ]:
-    img = Image.open( path )
-    width,height = img.size
-
-    print( f'Grid: { width } x { height }\n' )
-
-    return width, height
-
-def coord_to_grid( coord: Tuple, orig_grid_size: Tuple, new_grid_size: Tuple ) -> Tuple[ int, int ]:
-    new_grid_x, new_grid_y = new_grid_size
-    orig_grid_x, orig_grid_y = orig_grid_size
-    x, y = coord
-
-    new_x: float = ( ( round( x ) + ( orig_grid_x / 2 ) ) / orig_grid_x ) * new_grid_x
-    new_y: float = ( ( round( y ) + ( orig_grid_y / 2 ) ) / orig_grid_y ) * new_grid_y
-
-    return round( new_x ), round( new_y )
-
-map_grid = grid_from_image( fr'{ basePath }/cities-texas-map.png' )
-print( f'Orig grid: { ( orig_grid_x, orig_grid_y ) }\nNew Grid: { map_grid }\n' )
-
-for node in city_graph.graph:
-    translated_coord: Tuple = coord_to_grid( node.city.get_coords(), ( orig_grid_x, orig_grid_y ), map_grid )
-
-    print(f'Node City:\n { node.city }\n New Coords: { translated_coord }')
-
-total_distance = city_routes[ 'Distance' ].to_list()
-total_distance = np.array( total_distance ).sum()
-
+    # Set up the plot
+    _, ax = plt.subplots(figsize=(10, 8))
+    ax.imshow(image, extent=[-107, -93, 25, 37])
+    
+    for _, row in cities.iterrows():
+        city = row['City']
+        lat = row['Longitude']
+        lon = row['Latitude']
+        ax.plot(lon, lat, 'bo', markersize=5)  # Plot city as blue circles ('bo')
+        ax.text(lon + 0.1, lat, city, fontsize=9, color='black')  # Add city names slightly offset

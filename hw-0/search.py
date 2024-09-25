@@ -18,6 +18,18 @@ class Virus():
 
 # ----------------------------------------------------------------
 
+# Draw route on plot
+
+def draw_route( city_from: str, city_to: str, cities_graph: Graph ) -> None:
+    city_f: City = cities_graph.get_node_by_name( city_from ).city
+    city_t: City = cities_graph.get_node_by_name( city_to ).city
+    
+    lats: list = [ city_f.get_coords()[ 1 ], city_t.get_coords()[ 1 ]  ]
+    lons: list = [ city_f.get_coords()[ 0 ], city_t.get_coords()[ 0 ]  ]
+    plt.plot( lats, lons, 'red', lw=1 )
+
+# ----------------------------------------------------------------
+
 # Uninformed Search to spread to all cities
 
 def uninformed_bfs( virus: Virus, cities_graph: Graph ) -> None:
@@ -42,6 +54,8 @@ def uninformed_bfs( virus: Virus, cities_graph: Graph ) -> None:
 
             if last_city != current_city:
                 distance += available_routes.get( last_city )
+                draw_route( last_city,  current_city, cities_graph )
+                plt.show()
 
             for key in virus.infected_cities:
                 available_routes.pop( key, None )
@@ -68,7 +82,8 @@ def uninformed_bfs( virus: Virus, cities_graph: Graph ) -> None:
 
 virus1: Virus = Virus( name='Ligma', starting_city='Three Rivers' )
 print()
-uninformed_bfs( virus1, city_graph )
+setup_plot()
+uninformed_bfs( virus1, city_graph, delay=10 )
 print()
 
 # ----------------------------------------------------------------
