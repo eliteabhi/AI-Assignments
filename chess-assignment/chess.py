@@ -4,7 +4,6 @@
 # import sys
 # import time
 import itertools
-from IPython.display import clear_output
 from typing import List, Tuple, Optional
 
 # ----------------------------------------------------------------
@@ -57,7 +56,7 @@ def ChessBoardSetup() -> dict:
 
 
     return board
-    
+
 def DrawBoard( board: dict, custom_print: dict = None ) -> None:
     # write code to print the board - following is one print example
     # r t b q k b t r
@@ -71,35 +70,32 @@ def DrawBoard( board: dict, custom_print: dict = None ) -> None:
 
     print( '    a b c d e f g h' )
     print( '    +-------------+' )
-    
+
     for row in range(8, 0, -1):
         print( f'{row} | ', end='' )
-        
+
         for col in 'abcdefgh':
             index: str = f'{col}{row}'
             piece = board.get( index )
-            
+
             if custom_print is not None and piece is None:
                 piece = custom_print.get( index )
-            
+
             if piece is None:
                 piece = '.'
-                
+
             print( piece, end=' ' )
-            
+
         print( '' )
 
 def get_piece_position( piece: str, board: dict ) -> ( str | None ):
-    if piece.lower() == 'p':
-        return None
-
     return board.get( board.keys()[ board.values().index( piece ) ] )
 
 def MovePiece( piece: str, coord: str, board: dict ):
     # write code to move the one chess piece
     # you do not have to worry about the validity of the move - this will be done before calling this function
     # this function will at least take the move (from-piece and to-piece) as input and return the new board layout
-    
+
     current_position: str = get_piece_position( piece, board )
 
     board[ current_position ] = None
@@ -144,11 +140,11 @@ def is_path_clear( move_from: str, move_to: str, board: dict, custom_print_dict:
         return next_move, board.get( next_move )
 
     if custom_print_dict is not None:
-        custom_print_dict[ move_from ] = '-'
-        custom_print_dict[ next_move ] = '-'
+        custom_print_dict[ move_from ] = '+'
+        custom_print_dict[ next_move ] = '+'
 
-    is_path_clear( next_move, move_to, board, custom_print_dict ) is None
-        
+    is_path_clear( next_move, move_to, board, custom_print_dict )
+
 # ----------------------------------------------------------------
 
 print_dict = {}
@@ -198,7 +194,7 @@ def IsMoveLegal( piece: str, move_from: str, move_to: str, board: dict ) -> bool
     if board.get( move_to ) is not None and ( board.get( move_to ).isupper() == piece.isupper() ):
         return False
 
-    row_diff, col_diff = find_distance( move_from, move_to, board )
+    row_diff, col_diff = find_distance( move_from, move_to )
 
     # Pawn
     if piece.lower() == 'p':
@@ -231,36 +227,36 @@ def IsMoveLegal( piece: str, move_from: str, move_to: str, board: dict ) -> bool
     # sourcery skip: merge-nested-ifs
     # Rook
     if piece.lower() == 'r':
-        
+
         if row_diff * col_diff != 0:
             return False
-    
+
     # Bishop - Check if both directions and steps equally in both
     if piece.lower() == 'b':
-        
+
         if row_diff * col_diff != 0:
             return False
-    
+
         if row_diff == col_diff:
             return False
-    
+
     # Queen - Check if either stepping diagonally or in a straight line
     if piece.lower() == 'q':
-        
+
         if row_diff * col_diff != 0 and row_diff != col_diff:
             return False
-    
+
     if piece.lower() == 't':
-        
+
         if row_diff * col_diff == 0:
             return False
-        
+
         if abs( row_diff ) + abs( col_diff ) != 3:
-            return False    
+            return False
 
     # King
     if piece.lower() == 'k':
-        
+
         if abs( row_diff ) * abs( col_diff ) != 1:
             return False
 
@@ -269,20 +265,148 @@ def IsMoveLegal( piece: str, move_from: str, move_to: str, board: dict ) -> bool
 # gets a list of legal moves for a given piece
 # input = from-square
 # output = list of to-square locations where the piece can move to
-def GetListOfLegalMoves():
-    pass
-    # input is the current player and the given piece as the from-square
-    # initialize the list of legal moves, i.e., to-square locations to []
-    # go through all squares on the board
-    # for the selected square as to-square
-        # call IsMoveLegal() with input as from-square and to-square and save the returned value
-        # if returned value is True
-            # call DoesMovePutPlayerInCheck() with input as from-square and to-square and save the returned value
-            # if returned value is False
-                # append this move (to-square) as a legal move
-    # return the list of legal moves, i.e., to-square locations
+def GetListOfLegalMoves( player: str, move_from: str, board: dict ) -> Optional[ List ]:
+
+    if 'b' in player.lower():
+        player = player.lower()
+        row_direction = -1
+
+    else:
+        player = player.capitalize()
+        row_direction = 1
+
+    if board.get( move_from ) is None or board.get( move_from ).isupper() != player.isupper():
+        return None
+
+    piece: str = board.get( move_from )
+
+    move_list = []
+
+    match piece.lower():
+
+        case 'p':
+
+            next_row: str = f'{ int( move_from[1] ) + row_direction }'
+            move_list.append(f'{ move_from[0] }{ next_row }')
+
+            next_col: str = f'{ ord( move_from[1] ) + row_direction }'
+            move_list.append(f'{ next_col }{ next_row }')
+
+            next_col: str = f'{ ord( move_from[1] ) - row_direction }'
+            move_list.append(f'{ next_col }{ next_row }')
+
+            next_row: str = f'{ int( next_row ) + row_direction }'
+            move_list.append(f'{ move_from[0] }{ next_row }')
+
+        case 'r':
+
+            move_list.extend(
+
+                f'{ col }{ move_from[1] }'
+                for col in 'abcdefgh'
+                if col is not move_from[0]
+
+            )
+
+            move_list.extend(
+
+                f'{ move_list[0] }{ row }'
+                for row in '12345678'
+                if row != int(move_from[1])
+
+            )
+
+        case 'b':
+
+            move_list.extend(
+
+                f'{ col }{ row }'
+                for col in 'abcdefgh'
+                for row in '12345678'
+
+                if (
+
+                    col is not move_from[0]
+                    and row!= int( move_from[1] )
+                    and (
+
+                        ( col > move_from[0] and row > move_from[1] )
+                        or ( col < move_from[0] and row < move_from[1] )
+
+                    )
+                )
+            )
+
+        case 'q':
+
+            move_list.extend(
+                f'{ col }{ row }'
+                for col in 'abcdefgh'
+                for row in '12345678'
+                if (
+                    col is not move_from[0]
+                    and row!= int( move_from[1] )
+                    and (
+                        ( col > move_from[0] and row > move_from[1] )
+                        or ( col < move_from[0] and row < move_from[1] )
+                    )
+                )
+            )
+
+            move_list.extend(
+
+                f'{ col }{ move_from[1] }'
+                for col in 'abcdefgh'
+                if col is not move_from[0]
+
+            )
+
+            move_list.extend(
+
+                f'{ move_list[0] }{ row }'
+                for row in '12345678'
+                if row != int(move_from[1])
+
+            )
+
+        case 'k':
+
+            move_list.append( f'{ chr( ord( move_from[0]) - 1 ) }{ move_from[1] }' )
+
+            move_list.append( f'{ chr( ord( move_from[0]) + 1 ) }{ move_from[1] }' )
+
+            move_list.append( f'{ move_from[0] }{ chr( int( move_from[1] ) - 1 ) }' )
+
+            move_list.append( f'{ move_from[0] }{ chr( int( move_from[1] ) + 1 ) }' )
+
+        case 't':
+
+            next_col = ord( move_from[0] ) + 1
+            next_row = int( move_from[1] ) + 2
+            move_list.append( f'{ next_col }{ next_row }' )
+
+            next_col = ord( move_from[0] ) - 1
+            move_list.append( f'{ next_col }{ next_row }' )
+
+            next_row = int( move_from[1] ) - 2
+            move_list.append( f'{ next_col }{ next_row }' )
+
+            next_col = ord( move_from[0] ) - 1
+            move_list.append( f'{ next_col }{ next_row }' )
 
 
+    legal_moves: Optional[ List ] = [
+
+        move
+        for move in move_list
+        if IsMoveLegal( player, move_from, move, board )
+
+    ]
+
+    if legal_moves == []:
+        legal_moves = None
+
+    return legal_moves
 
 # gets a list of all pieces for the current player that have legal moves
 def GetPiecesWithLegalMoves():
@@ -295,19 +419,6 @@ def GetPiecesWithLegalMoves():
             # if there are any legel moves
                 # append this piece to the list of pieces with legal moves
     # return the final list of pieces with legal moves
-
-
-
-# returns True if the current player is in checkmate, else False
-def IsCheckmate():
-    pass
-    # call GetPiecesWithLegalMoves() to get all legal moves for the current player
-    # if there is no piece with any valid move
-        # return True
-    # else
-        # return False
-
-
 
 # returns True if the given player is in Check state
 def IsInCheck():
@@ -323,40 +434,6 @@ def IsInCheck():
     # return False at the end
 
 
-
-# helper function to figure out if a move is legal for straight-line moves (rooks, bishops, queens, pawns)
-# returns True if the path is clear for a move (from-square and to-square), non-inclusive
-def IsClearPath():
-    pass
-    # given the move (from-square and to-square)
-
-    # if the from and to squares are only one square apart
-        # return True
-    # else
-        # if to-square is in the +ve vertical direction from from-square
-            # new-from-square = next square in the +ve vertical direction
-        # else if to-square is in the -ve vertical direction from from-square
-            # new-from-square = next square in the -ve vertical direction
-        # else if to-square is in the +ve horizontal direction from from-square
-            # new-from-square = next square in the +ve horizontal direction
-        # else if to-square is in the -ve horizontal direction from from-square
-            # new-from-square = next square in the -ve horizontal direction
-        # else if to-square is in the SE diagonal direction from from-square
-            # new-from-square = next square in the SE diagonal direction
-        # else if to-square is in the SW diagonal direction from from-square
-            # new-from-square = next square in the SW diagonal direction
-        # else if to-square is in the NE diagonal direction from from-square
-            # new-from-square = next square in the NE diagonal direction
-        # else if to-square is in the NW diagonal direction from from-square
-            # new-from-square = next square in the NW diagonal direction
-
-    # if new-from-square is not empty
-        # return False
-    # else
-        # return the result from the recursive call of IsClearPath() with the new-from-square and to-square
-
-
-
 # makes a hypothetical move (from-square and to-square)
 # returns True if it puts current player into check
 def DoesMovePutPlayerInCheck():
@@ -366,6 +443,4 @@ def DoesMovePutPlayerInCheck():
     # Call the IsInCheck() function to see if the 'player' is in check - save the returned value
     # Undo the temporary move
     # return the value saved - True if it puts current player into check, False otherwise
-
-
 
