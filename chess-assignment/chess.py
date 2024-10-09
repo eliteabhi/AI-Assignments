@@ -409,20 +409,72 @@ def GetListOfLegalMoves( player: str, move_from: str, board: dict ) -> Optional[
     return legal_moves
 
 # gets a list of all pieces for the current player that have legal moves
-def GetPiecesWithLegalMoves():
-    pass
-    # initialize the list of pieces with legal moves to []
-    # go through all squares on the board
-    # for the selected square
-        # if the square contains a piece that belongs to the current player's team
-            # call GetListOfLegalMoves() to get a list of all legal moves for the selected piece / square
-            # if there are any legel moves
-                # append this piece to the list of pieces with legal moves
-    # return the final list of pieces with legal moves
+def GetPiecesWithLegalMoves( player: str, board: dict ) -> Optional[ List ]:
+
+    player = player.lower() if 'b' in player.lower() else player.capitalize()
+
+    spaces_with_pieces_with_legal_moves = []
+
+    for space in board:
+
+        if board.get( space ) is None or board.get( space ).isupper() != player.isupper():
+            continue
+
+        if GetListOfLegalMoves( player, space, board ) is not None:
+            spaces_with_pieces_with_legal_moves.append( space )
+
+    return spaces_with_pieces_with_legal_moves or None
 
 # returns True if the given player is in Check state
-def IsInCheck():
-    pass
+def IsInCheck( player: str, board: dict ) -> Optional[ Tuple[ str, str ] ]:
+
+    # Get player's king symbol
+    king_symbol: str = 'k' if 'b' in player.lower() else 'K'
+
+    # Find the player's king
+    pieces_with_legal_moves: List = GetPiecesWithLegalMoves( player, board )
+    king_square: str = pieces_with_legal_moves.pop( 0 )
+
+    while board.get( king_square ) != king_symbol:
+        king_square = pieces_with_legal_moves.pop( 0 )
+
+    occupied_spaces: List = []
+
+    # Check if player is in check by rook/queen
+    occupied_spaces.append( is_path_clear( king_square, f'a{ king_square[1] }', board ) )
+
+    occupied_spaces.append( is_path_clear( king_square, f'h{ king_square[1] }', board ) )
+
+    occupied_spaces.append( is_path_clear( king_square, f'{ king_square[0] }1', board ) )
+
+    occupied_spaces.append( is_path_clear( king_square, f'{ king_square[0] }8', board ) )
+
+    # Check if player is in check by bishop/queen
+
+    distance_from_top_left = find_distance( king_square, 'a8' )
+
+    min_col: str = chr( ord( 'a' ) + ( distance_from_top_left[1] - distance_from_top_left[0] ) )
+    min_row: str = chr( 1 + ( distance_from_top_left[1] - distance_from_top_left[0] ) )
+
+    max_row = chr( ord( 'a' ) + ( distance_from_top_left[0] - distance_from_top_left[1] ) )
+
+    max_top_left: str = f'{ min_col }{ max_row }'
+
+    occupied_spaces.append( is_path_clear( king_square, 'a1', board ) )
+
+    occupied_spaces.append( is_path_clear( king_square, 'h8', board ) )
+
+    occupied_spaces.append( is_path_clear( king_square, 'a8', board ) )
+
+    occupied_spaces.append( is_path_clear( king_square, 'h1', board ) )
+
+    square = occupied_spaces.pop( 0 )
+
+    while len( occupied_spaces ) > 0 and square is not None and square[1].isupper() != king_symbol.isupper():
+        return square
+
+    return None
+
     # find given player's King's location = king-square
     # go through all squares on the board
         # if there is a piece at that location and that piece is of the enemy team
