@@ -91,15 +91,20 @@ def DrawBoard( board: dict, custom_print: dict = None ) -> None:
 def get_piece_position( piece: str, board: dict ) -> ( str | None ):
     return board.get( board.keys()[ board.values().index( piece ) ] )
 
-def MovePiece( piece: str, coord: str, board: dict ):
+def MovePiece( move_to: str, board: dict, move_from: str = None, piece: str = None ):
     # write code to move the one chess piece
     # you do not have to worry about the validity of the move - this will be done before calling this function
     # this function will at least take the move (from-piece and to-piece) as input and return the new board layout
 
-    current_position: str = get_piece_position( piece, board )
+    if piece is None and move_from is None:
+        return
 
-    board[ current_position ] = None
-    board[ coord ] = piece
+    elif piece is not None:
+        move_from: str = get_piece_position( piece, board )
+
+
+    board[ move_from ] = None
+    board[ move_to ] = piece
 
 # ----------------------------------------------------------------
 
@@ -114,6 +119,12 @@ def find_distance( move_from: str, move_to: str ) -> Tuple[ int, int ]:
     return int( move_to[1] ) - int( move_from[1] ), ord( move_to[0] ) - ord( move_from[0] )
 
 def is_path_clear( move_from: str, move_to: str, board: dict, custom_print_dict: dict = None ) -> Optional[ Tuple[ str , str ] ]:
+
+    if move_from[0] not in 'abcdefgh' or move_to[0] not in 'abcdefgh':
+        return None
+
+    if move_from[1] not in '12345678' or move_to[1] not in 'abcdefgh':
+        return None
 
     row_diff, col_diff = find_distance( move_from, move_to )
 
@@ -441,32 +452,68 @@ def IsInCheck( player: str, board: dict ) -> Optional[ Tuple[ str, str ] ]:
     occupied_spaces: List = []
 
     # Check if player is in check by rook/queen
+
     occupied_spaces.append( is_path_clear( king_square, f'a{ king_square[1] }', board ) )
-
     occupied_spaces.append( is_path_clear( king_square, f'h{ king_square[1] }', board ) )
-
     occupied_spaces.append( is_path_clear( king_square, f'{ king_square[0] }1', board ) )
-
     occupied_spaces.append( is_path_clear( king_square, f'{ king_square[0] }8', board ) )
 
     # Check if player is in check by bishop/queen
 
     distance_from_top_left = find_distance( king_square, 'a8' )
+    distance_from_top_right = find_distance( king_square, 'h8' )
+    distance_from_bottom_left = find_distance( king_square, 'a1' )
+    distance_from_bottom_right = find_distance( king_square, 'h1' )
 
-    min_col: str = chr( ord( 'a' ) + ( distance_from_top_left[1] - distance_from_top_left[0] ) )
-    min_row: str = chr( 1 + ( distance_from_top_left[1] - distance_from_top_left[0] ) )
+    col: str = max( ord( 'a' ), ord( 'a' ) + ( distance_from_top_left[1] - distance_from_top_left[0] ) )
+    row: str = min( 8, 8 - ( distance_from_top_left[0] - distance_from_top_left[1] ) )
 
-    max_row = chr( ord( 'a' ) + ( distance_from_top_left[0] - distance_from_top_left[1] ) )
+    top_left: str = f'{ col }{ row }'
 
-    max_top_left: str = f'{ min_col }{ max_row }'
+    col: str = min( ord( 'h' ), ord( 'h' ) - ( distance_from_top_right[1] - distance_from_top_right[0] ) )
+    row: str = min( 8, 8 - ( distance_from_top_right[0] - distance_from_top_right[1] ) )
 
-    occupied_spaces.append( is_path_clear( king_square, 'a1', board ) )
+    top_right: str = f'{ col }{ row }'
 
-    occupied_spaces.append( is_path_clear( king_square, 'h8', board ) )
+    col: str = min( ord( 'h' ), ord( 'h' ) - ( distance_from_bottom_right[1] + distance_from_bottom_right[0] ) )
+    row: str = max( 1, 1 + ( distance_from_bottom_right[0] + distance_from_bottom_right[1] ) )
 
-    occupied_spaces.append( is_path_clear( king_square, 'a8', board ) )
+    bottom_right: str = f'{ col }{ row }'
 
-    occupied_spaces.append( is_path_clear( king_square, 'h1', board ) )
+    col: str = max( ord( 'a' ), ord( 'a' ) + ( distance_from_bottom_left[1] - distance_from_bottom_left[0] ) )
+    row: str = max( 1, 1 + ( distance_from_bottom_left[0] + distance_from_bottom_left[1] ) )
+
+    bottom_left: str = f'{ col, row }'
+
+    diagonals: str = [ bottom_left, bottom_right, top_left, top_right ]
+
+    for space in diagonals:
+        path = is_path_clear( king_square, space, board )
+        if path is not None and path[1].lower() in [ 'b', 'q', 'p' ]:
+            occupied_spaces.append( path )
+
+    # Check if player is in check by pawn
+
+    spaces = occupied_spaces
+    for square in spaces:
+        row_diff, col_diff = find_distance( king_square, square[0] )
+        if square[1] == 'p' and row_diff != 1 and col_diff not in [ -1, 1 ]:
+            occupied_spaces.remove( square )
+
+        elif square[1] == 'P' and row_diff != -1 and col_diff not in [ -1, 1 ]:
+            occupied_spaces.remove( square )
+
+    # Check if player is in check by a knight
+
+    top_left = f' { chr( ord( king_square[0] ) - 1 ) }{ int( king_square[1] ) + 2 }'
+    top_right = f' { chr( ord( king_square[0] ) - 1 ) }{ int( king_square[1] ) + 2 }'
+    bottom_left = f' { chr( ord( king_square[0] ) - 1 ) }{ int( king_square[1] ) + 2 }'
+    bottom_right = f' { chr( ord( king_square[0] ) - 1 ) }{ int( king_square[1] ) + 2 }'
+
+    occupied_spaces.append( is_path_clear( king_square, top_left, board ) )
+    occupied_spaces.append( is_path_clear( king_square, top_right, board ) )
+    occupied_spaces.append( is_path_clear( king_square, bottom_left, board ) )
+    occupied_spaces.append( is_path_clear( king_square, bottom_left, board ) )
 
     square = occupied_spaces.pop( 0 )
 
@@ -475,24 +522,12 @@ def IsInCheck( player: str, board: dict ) -> Optional[ Tuple[ str, str ] ]:
 
     return None
 
-    # find given player's King's location = king-square
-    # go through all squares on the board
-        # if there is a piece at that location and that piece is of the enemy team
-            # call IsMoveLegal() for the enemy player from that square to the king-square
-            # if the value returned is True
-                # return True
-            # else
-                # do nothing and continue
-    # return False at the end
-
-
 # makes a hypothetical move (from-square and to-square)
 # returns True if it puts current player into check
-def DoesMovePutPlayerInCheck():
-    pass
-    # given the move (from-square and to-square), find the 'from-piece' and 'to-piece'
-    # make the move temporarily by changing the 'board'
-    # Call the IsInCheck() function to see if the 'player' is in check - save the returned value
-    # Undo the temporary move
-    # return the value saved - True if it puts current player into check, False otherwise
+def DoesMovePutPlayerInCheck( player: str, move_from: str, move_to: str, board: dict ) -> bool:
+
+    mock_board = board
+
+    MovePiece( move_to, mock_board, move_from )
+    return IsInCheck( player, mock_board ) is None
 
