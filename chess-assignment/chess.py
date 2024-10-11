@@ -400,6 +400,9 @@ def IsMoveLegal( move_from: str, move_to: str, board: dict ) -> bool:
         if abs( row_diff ) * abs( col_diff ) != 1:
             return False
 
+        else:
+            return True
+
     return is_path_clear( move_from, move_to, board ) is None
 
 # ----------------------------------------------------------------
@@ -514,13 +517,26 @@ def GetListOfLegalMoves( player: str, move_from: str, board: dict ) -> Optional[
 
         case 'k':
 
-            move_list.append( f'{ chr( ord( move_from[0]) - 1 ) }{ move_from[1] }' )
+            left: str = chr( ord( move_from[0]) - 1 )
+            right: str = chr( ord( move_from[0]) + 1 )
+            up: int = int( move_from[1] ) + 1
+            down: int = int( move_from[1] ) - 1
 
-            move_list.append( f'{ chr( ord( move_from[0]) + 1 ) }{ move_from[1] }' )
+            move_list.append( f'{ left }{ move_from[1] }' )
 
-            move_list.append( f'{ move_from[0] }{ chr( int( move_from[1] ) - 1 ) }' )
+            move_list.append( f'{ right }{ move_from[1] }' )
 
-            move_list.append( f'{ move_from[0] }{ chr( int( move_from[1] ) + 1 ) }' )
+            move_list.append( f'{ move_from[0] }{ down }' )
+
+            move_list.append( f'{ move_from[0] }{ up }' )
+
+            move_list.append( f'{ left }{ up }' )
+
+            move_list.append( f'{ left }{ down }' )
+
+            move_list.append( f'{ right }{ up }' )
+
+            move_list.append( f'{ right }{ up }' )
 
         case 't':
 
@@ -602,10 +618,12 @@ def run_game( white_bot_function: Callable[ ..., Optional[ Tuple[ str, str, str 
 
         if white_move is None:
             print( 'White has no legal moves. Black wins!' )
+            DrawBoard( board )
             break
 
         if black_move is None:
             print( 'Black has no legal moves. White wins!' )
+            DrawBoard( board )
             break
 
         if stop_oscilation:
@@ -648,10 +666,10 @@ def MakeRandomMove( player: str, board: dict, seed: Any = None ) -> Optional[ Tu
 
         if not possible_moves:
 
+            pieces_with_legal_moves.remove( move_from )
+
             if not pieces_with_legal_moves:
                 return None
-
-            pieces_with_legal_moves.remove( move_from )
 
             move_from = random.choice( pieces_with_legal_moves )
             possible_moves: str = GetListOfLegalMoves( player, move_from, board )
@@ -719,8 +737,8 @@ def MakeMinMaxMove( player: str, board: str, seed: Any = None, last_move_from: s
                 break
 
         while DoesMovePutPlayerInCheck( player, move_from, move_to, board ) and possible_moves:
-            possible_moves.pop( 0 )
             move_to: str = possible_moves[0]
+            possible_moves.pop( 0 )
 
         if not possible_moves:
             continue
@@ -798,6 +816,6 @@ def MakeMinMaxMove( player: str, board: str, seed: Any = None, last_move_from: s
 print()
 print()
 chessboard: dict = ChessBoardSetup()
-run_game( white_bot_function=MakeMinMaxMove, black_bot_function=MakeMinMaxMove, stop_oscilation=True, turns=400, seed=90324, board=chessboard )
+run_game( white_bot_function=MakeMinMaxMove, black_bot_function=MakeMinMaxMove, stop_oscilation=True, turns=400, seed=9233240324, board=chessboard )
 
 
