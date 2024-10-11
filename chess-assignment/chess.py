@@ -579,16 +579,24 @@ def GetPiecesWithLegalMoves( player: str, board: dict ) -> Optional[ List ]:
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
 
-def run_game( white_bot_function: Callable[ ..., Optional[ Tuple[ str, str, str ] ] ], black_bot_function: Callable[ ..., Optional[ Tuple[ str, str, str ] ] ], turns: int = None, seed: int = None, board: dict = None ):
+def run_game( white_bot_function: Callable[ ..., Optional[ Tuple[ str, str, str ] ] ], black_bot_function: Callable[ ..., Optional[ Tuple[ str, str, str ] ] ], stop_oscilation: bool = False, turns: int = None, seed: int = None, board: dict = None ):
 
     if board is None:
         board = ChessBoardSetup()
 
     turns: int = 1000000 if turns is None else turns
 
+    last_white_move: str = None
+    last_black_move: str = None
+
     for turn in range( turns ):
-        white_move = white_bot_function( 'white', board, seed )
-        black_move = black_bot_function( 'black', board, seed )
+        if stop_oscilation:
+            white_move = white_bot_function( 'white', board, seed, last_white_move )
+            black_move = black_bot_function( 'black', board, seed, last_black_move )
+
+        else:
+            white_move = white_bot_function( 'white', board, seed )
+            black_move = black_bot_function( 'black', board, seed )
 
         print( f'\nTurn { turn + 1 }:' )
 
@@ -599,6 +607,10 @@ def run_game( white_bot_function: Callable[ ..., Optional[ Tuple[ str, str, str 
         if black_move is None:
             print( 'Black has no legal moves. White wins!' )
             break
+
+        if stop_oscilation:
+            last_white_move = white_move[0]
+            last_black_move = black_move[0]
 
         print( f'White moved from { white_move[0] } to { white_move[1] }.' )
         if white_move[2] is not None:
@@ -654,30 +666,111 @@ def MakeRandomMove( player: str, board: dict, seed: Any = None ) -> Optional[ Tu
 
 run_game( white_bot_function=MakeRandomMove, black_bot_function=MakeRandomMove, turns=200, seed=90324, board=chessboard )
 
-
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
 
-def evaluate_score( player: str, move_to: str, board: str ) -> int:
+def evaluate_score( board: dict ) -> int:
 
     PIECE_SCORE_LUT: dict[ str, int ] = { 'p': 1, 'r': 5, 't': 3, 'b': 4, 'q': 10, 'k': 20 }
 
-    sign: int = -1 if 'b' in player.lower() else 1
+    score: int = 0
+    for square in board:
+        piece: str = board.get( square )
+        if piece is None:
+            continue
+        sign: int = 1 if piece.isupper() else -1
+        score += sign * PIECE_SCORE_LUT.get( piece.lower(), 0 )
 
-    piece_at_move: str = board.get( move_to )
-
-    return sign * ( PIECE_SCORE_LUT.get( piece_at_move.lower() ) or 0 )
+    return score
 
     # this function will calculate the score on the board, if a move is performed
     # give score for each of piece and calculate the score for the chess board
 
+def MakeMinMaxMove( player: str, board: str, seed: Any = None, last_move_from: str = None ) -> Optional[ Tuple[ str, str, str ] ]:
 
-def GetMinMaxMove():
-    pass
     # return the best move for the current player using the MinMax strategy
     # to get the allocated points, searching should be 2-ply (one Max and one Min)
 
     # Following is the setup for a 2-ply game
+
+    player = player.lower() if 'b' in player.lower() else player.upper()
+    opponent: str = 'black' if player.isupper() else 'white'
+
+    player_pieces_with_legal_moves: List = GetPiecesWithLegalMoves( player, board )
+    opponent_pieces_with_legal_moves: List = GetPiecesWithLegalMoves( opponent, board )
+
+    if player_pieces_with_legal_moves is None:
+        return None
+
+    repeat_counter: int = 1
+
+    best_player_move: Tuple[ str, str, str ] = None
+    player_score: int = 0
+
+    for move_from in list( player_pieces_with_legal_moves ):
+        possible_moves: List = GetListOfLegalMoves( player, move_from, board )
+
+        move_to: str = possible_moves[0]
+
+        if last_move_from == move_to:
+            repeat_counter -= 1
+            if repeat_counter == 0:
+                best_player_move = None
+                break
+
+        while DoesMovePutPlayerInCheck( player, move_from, move_to, board ) and possible_moves:
+            possible_moves.pop( 0 )
+            move_to: str = possible_moves[0]
+
+        if not possible_moves:
+            continue
+
+        player_mock_board: dict = deepcopy( board )
+
+        player_mock_captured_piece: str = MovePiece( move_from=move_from, move_to=move_to, board=player_mock_board )
+
+        best_enemy_score: int = 0
+        best_player_score: int = 0
+
+        for enemy_move_from in list( opponent_pieces_with_legal_moves ):
+            enemy_mock_board: dict = deepcopy( player_mock_board )
+
+            enemy_possible_moves: List = GetListOfLegalMoves( opponent, enemy_move_from, enemy_mock_board )
+            if not enemy_possible_moves:
+                continue
+
+            enemy_move_to: str = enemy_possible_moves[0]
+
+            while DoesMovePutPlayerInCheck( opponent, enemy_move_from, enemy_move_to, player_mock_board ) and enemy_possible_moves:
+                enemy_move_to: str = enemy_possible_moves[0]
+                enemy_possible_moves.pop( 0 )
+
+            if not enemy_possible_moves:
+                continue
+
+            enemy_move_to: str = enemy_possible_moves[0]
+
+            MovePiece( move_from=enemy_move_from, move_to=enemy_move_to, board=enemy_mock_board )
+
+            curr_enemy_score: int = evaluate_score( enemy_mock_board )
+
+            if curr_enemy_score < best_enemy_score:
+                best_enemy_score = curr_enemy_score
+
+            if curr_enemy_score > best_player_score:
+                best_player_score = curr_enemy_score
+
+        if best_player_score > player_score:
+            player_score = best_player_score
+            best_player_move = ( move_from, move_to, player_mock_captured_piece )
+
+    if best_player_move is None:
+        return MakeRandomMove( player, board, seed )
+
+    player_captured_piece = MovePiece( move_from=best_player_move[0], move_to=best_player_move[1], board=board )
+
+    return ( best_player_move[0], best_player_move[1], player_captured_piece )
+
 
     # pieces = GetPiecesWithLegalMoves(curPlayer)
     # for each piece in pieces
@@ -701,5 +794,10 @@ def GetMinMaxMove():
     # e.g., move king left one square and then move king back - repeat
     # For this you will need to remember the previous move and see if the current best move is not the same and opposite as the previous move
     # If so, pick the second best move instead of the best move
+
+print()
+print()
+chessboard: dict = ChessBoardSetup()
+run_game( white_bot_function=MakeMinMaxMove, black_bot_function=MakeMinMaxMove, stop_oscilation=True, turns=400, seed=90324, board=chessboard )
 
 
