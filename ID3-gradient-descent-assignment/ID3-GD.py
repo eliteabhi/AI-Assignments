@@ -1,6 +1,7 @@
 # import all required libraries
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from typing import Tuple
 
 # ----------------------------------------------------------------
@@ -35,20 +36,20 @@ def activation_function( h: np.float64 ) -> np.float64:
 
 def train( train_data: pd.DataFrame, learning_rate: float = 0.05 ) -> np.ndarray:
 
-    weights: np.ndarray = np.zeros( train_data.shape[1] , dtype=float );
+    weights: np.ndarray = np.zeros( train_data.shape[1] , dtype=float )
 
     for _, row in train_data.iterrows():
         input_field: np.ndarray = row.drop( 'C' ).to_numpy()
         label: int = row[ 'C' ]
 
-        h: np.ndarray = np.dot( weights[:-1], input_field ) + weights[-1]
+        h: np.float64 = np.dot( weights[:-1], input_field ) + weights[-1]
 
         z: np.float64 = activation_function( h )
-        
+
         # weights_copy: np.ndarray = np.copy( weights )
         weights[:-1] += learning_rate * ( label - z ) * input_field
         weights[-1] += learning_rate * ( label - z )
-        
+
     return weights
 
 # ----------------------------------------------------------------
@@ -58,7 +59,7 @@ def train( train_data: pd.DataFrame, learning_rate: float = 0.05 ) -> np.ndarray
 
 def test( test_data: pd.DataFrame, weights: np.ndarray, threshold: float=0.5 ) -> float:
     total_tests: int = test_data.shape[0]
-    
+
     if total_tests == 0:
         return 0
 
@@ -70,8 +71,8 @@ def test( test_data: pd.DataFrame, weights: np.ndarray, threshold: float=0.5 ) -
 
         h: np.float64 = np.dot( weights[:-1], input_field ) + weights[ -1 ]
 
-        prediction: np.int64 = 1 if activation_function( h ) >= threshold else 0
-        
+        prediction: int = 1 if activation_function( h ) >= threshold else 0
+
         if prediction == target:
             correct_predictions += 1
 
@@ -85,7 +86,7 @@ def test( test_data: pd.DataFrame, weights: np.ndarray, threshold: float=0.5 ) -
 def gradient_descent( df_train, df_test, learning_rate=0.05, threshold=0.5 ) -> Tuple[ float, float ]:
 
     weights: np.ndarray = train( train_data=df_train, learning_rate=learning_rate )
-    
+
     training_accuracy: float = test( test_data=df_train, weights=weights, threshold=threshold )
     testing_accuracy: float = test( test_data=df_test, weights=weights, threshold=threshold )
 
@@ -94,20 +95,38 @@ def gradient_descent( df_train, df_test, learning_rate=0.05, threshold=0.5 ) -> 
 # ----------------------------------------------------------------
 
 # Threshold of 0.5 will be used to classify the instance for the test. If the value is >= 0.5, classify as 1 or else 0.
-threshold: float = 0.7
+thresh: float = 0.5
 
 # ----------------------------------------------------------------
+
+
+# Main algorithm loop
 
 start: float = 0.05
 stop: float = 1.0
 step: float = 0.01
 
-for learning_rate in np.arange( start, stop + step, step, dtype=float ):
-    training_accuracy, testing_accuracy = gradient_descent( df_train=gd_training_dataset_df, df_test=gd_test_dataset_df, learning_rate=learning_rate, threshold=threshold )
-    print( 'Accuracy for LR of %.2f on Training set = %.2f' % ( learning_rate, training_accuracy ) )
-    print( 'Accuracy for LR of %.2f on Testing set = %.2f\n' % ( learning_rate, testing_accuracy ) )
+accuracies_shape: int = int( ( stop - start ) / step ) + 1
+training_accuracies: np.ndarray = np.zeros( shape=accuracies_shape )
+testing_accuracies:np.ndarray = np.zeros( shape=accuracies_shape )
 
-# Main algorithm loop
-# Loop through all the different learning rates [0.05, 1]
-    # For each learning rate selected, call the gradient descent function to obtain the train and test accuracy values
-    # Print both the accuracy values as "Accuracy for LR of 0.1 on Training set = x %" OR "Accuracy for LR of 0.1 on Testing set = x %"
+for lr, i in zip( np.arange( start, stop + step, step, dtype=float ), range( training_accuracies.shape[0] ) ):
+    training_acc, testing_acc = gradient_descent( df_train=gd_training_dataset_df, df_test=gd_test_dataset_df, learning_rate=lr, threshold=thresh )
+    print( 'Accuracy for LR of %.2f on Training set = %.2f' % ( lr, training_acc ) )
+    print( 'Accuracy for LR of %.2f on Testing set = %.2f\n' % ( lr, testing_acc ) )
+
+    training_accuracies[ i ] = training_acc * 100
+    testing_accuracies[ i ] = testing_acc * 100
+
+# ----------------------------------------------------------------
+
+# Plot the graphs for accuracy results.
+
+plt.plot( np.arange( start, stop + step, step, dtype=float ), training_accuracies, label='Training Accuracy (in %)' )
+plt.plot( np.arange( start, stop + step, step, dtype=float ), testing_accuracies, label='Testing Accuracy (in %)' )
+plt.xlabel( 'Learning Rate' )
+plt.ylabel( 'Accuracy' )
+plt.legend()
+plt.show()
+
+# ----------------------------------------------------------------
