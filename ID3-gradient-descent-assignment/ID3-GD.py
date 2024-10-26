@@ -83,9 +83,10 @@ def test( test_data: pd.DataFrame, weights: np.ndarray, threshold: float=0.5 ) -
 # ----------------------------------------------------------------
 
 # Gradient Descent function
-def gradient_descent( df_train, df_test, learning_rate=0.05, threshold=0.5 ) -> Tuple[ float, float ]:
+def gradient_descent( df_train: pd.DataFrame, df_test: pd.DataFrame, learning_rate: float=0.05, threshold: float=0.5, weights: np.ndarray = np.array( None ) ) -> Tuple[ float, float ]:
 
-    weights: np.ndarray = train( train_data=df_train, learning_rate=learning_rate )
+    if not weights.shape:
+        weights = train( train_data=df_train, learning_rate=learning_rate )
 
     training_accuracy: float = test( test_data=df_train, weights=weights, threshold=threshold )
     testing_accuracy: float = test( test_data=df_test, weights=weights, threshold=threshold )
@@ -130,3 +131,25 @@ plt.legend()
 plt.show()
 
 # ----------------------------------------------------------------
+
+# Data file name variables
+id3_training_dataset_path = f"{ basePath }id3-train.dat"
+id3_testing_dataset_path = f"{ basePath }id3-test.dat"
+
+# ----------------------------------------------------------------
+
+# Pseudocode for the ID3 algorithm. Use this to create function(s).
+
+def ID3( dataset: pd.DataFrame, root, attributes_remaining ):
+    pass
+
+# def ID3(data, root, attributesRemaining):
+    # If you reach a leaf node in the decision tree and have no examples left or the examples are equally split among multiple classes
+        # Choose and the class that is most frequent in the entire training set and return the updated tree
+    # If all the instances have only one class label
+        # Make this as the leaf node and use the label as the class value of the node and return the updated tree
+    # If you reached a leaf node but still have examples that belong to different classes (there are no remaining attributes to be split)
+        # Assign the most frequent class among the instances at the leaf node and return the updated tree
+    # Find the best attribute to split by calculating the maximum information gain from the attributes remaining by calculating the entropy
+    # Split the tree using the best attribute and recursively call the ID3 function using DFS to fill the sub-tree
+    # return the root as the tree
