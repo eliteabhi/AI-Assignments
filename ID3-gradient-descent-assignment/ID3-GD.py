@@ -2,7 +2,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Tuple
+from typing import Tuple, Dict, Union, Any, List
+from copy import deepcopy
 
 # ----------------------------------------------------------------
 
@@ -140,8 +141,8 @@ id3_testing_dataset_path = f"{ basePath }id3-test.dat"
 
 # Pseudocode for the ID3 algorithm. Use this to create function(s).
 
-def ID3( dataset: pd.DataFrame, root, attributes_remaining ):
-    pass
+# def ID3( dataset: pd.DataFrame, root, attributes_remaining ):
+    
 
 # def ID3(data, root, attributesRemaining):
     # If you reach a leaf node in the decision tree and have no examples left or the examples are equally split among multiple classes
@@ -153,3 +154,49 @@ def ID3( dataset: pd.DataFrame, root, attributes_remaining ):
     # Find the best attribute to split by calculating the maximum information gain from the attributes remaining by calculating the entropy
     # Split the tree using the best attribute and recursively call the ID3 function using DFS to fill the sub-tree
     # return the root as the tree
+
+
+# Entropy calculation
+def entropy(y: pd.Series) -> float:
+    value_counts = y.value_counts(normalize=True)
+    return -1 * sum(value_counts * np.log2(value_counts))
+
+# Information Gain calculation
+def information_gain( dataset: pd.DataFrame, attribute: str, target_attribute: str ) -> float:
+    total_entropy: float = entropy(dataset[target_attribute])
+    weighted_entropy: float = 0.0
+
+    for _, subset in dataset.groupby( attribute ):
+        subset_entropy: float = entropy(subset[target_attribute])
+        weighted_entropy += ( subset.shape[0] / dataset.shape[0] ) * subset_entropy
+
+    return total_entropy - weighted_entropy
+
+# ID3 Algorithm
+def ID3( dataset: pd.DataFrame, target_attribute: str, attributes_remaining: List[ str ] ) -> Union[ str, Dict[ str, Any ] ]:
+    
+    # Check if all target values are the same
+    unique_targets: np.ndarray = np.unique( dataset[ target_attribute ] )
+    if unique_targets.shape[0] == 1:
+        return unique_targets[0]
+
+    # Check if no more attributes to split
+    if not attributes_remaining:
+        return dataset[ target_attribute ].mode()[0]
+
+    # Calculate information gain for each attribute
+    gains: Dict[ str, float ] = { attr: information_gain( dataset, attr, target_attribute ) for attr in attributes_remaining }
+
+    # Find the attribute with the maximum information gain
+    best_attribute: str = max( gains )
+
+    # Create a new tree node
+    tree: Dict[ str, Any ] = { best_attribute: {} }
+
+    # Recursive splitting
+    remaining_attributes: List[str] = [ attr for attr in attributes_remaining if attr != best_attribute ]
+    for value, subset in dataset.groupby( best_attribute ):
+        subtree = ID3( subset, target_attribute, deepcopy( remaining_attributes ) )
+        tree[ best_attribute ][ value ] = subtree
+    
+    return tree
