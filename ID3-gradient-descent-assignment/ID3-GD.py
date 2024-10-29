@@ -142,7 +142,7 @@ id3_testing_dataset_path = f"{ basePath }id3-test.dat"
 # Pseudocode for the ID3 algorithm. Use this to create function(s).
 
 # def ID3( dataset: pd.DataFrame, root, attributes_remaining ):
-    
+
 
 # def ID3(data, root, attributesRemaining):
     # If you reach a leaf node in the decision tree and have no examples left or the examples are equally split among multiple classes
@@ -174,7 +174,7 @@ def information_gain( dataset: pd.DataFrame, attribute: str, target_attribute: s
 
 # ID3 Algorithm
 def ID3( dataset: pd.DataFrame, target_attribute: str, attributes_remaining: List[ str ] ) -> Union[ str, Dict[ str, Any ] ]:
-    
+
     # Check if all target values are the same
     unique_targets: np.ndarray = np.unique( dataset[ target_attribute ] )
     if unique_targets.shape[0] == 1:
@@ -188,7 +188,7 @@ def ID3( dataset: pd.DataFrame, target_attribute: str, attributes_remaining: Lis
     gains: Dict[ str, float ] = { attr: information_gain( dataset, attr, target_attribute ) for attr in attributes_remaining }
 
     # Find the attribute with the maximum information gain
-    best_attribute: str = max( gains )
+    best_attribute: str = max( gains, key=lambda k: gains[k] )
 
     # Create a new tree node
     tree: Dict[ str, Any ] = { best_attribute: {} }
@@ -198,5 +198,23 @@ def ID3( dataset: pd.DataFrame, target_attribute: str, attributes_remaining: Lis
     for value, subset in dataset.groupby( best_attribute ):
         subtree = ID3( subset, target_attribute, deepcopy( remaining_attributes ) )
         tree[ best_attribute ][ value ] = subtree
-    
+
     return tree
+
+# ----------------------------------------------------------------
+
+# Function to make a prediction using the decision tree
+def predict( tree: Dict[ str, Any ], instance: pd.Series ) -> Any:
+    if not isinstance( tree, dict ):
+        return tree
+
+    attribute = next( iter(tree) )
+    subtree = tree[ attribute ].get( instance[ attribute ] )
+    return predict( subtree, instance ) if subtree else None
+
+# Function to evaluate accuracy of the tree on a dataset
+def evaluate_accuracy( tree: Dict[str, Any], dataset: pd.DataFrame, target_attribute: str ) -> float:
+    correct_predictions = sum(
+        predict( tree, row ) == row[target_attribute] for _, row in dataset.iterrows()
+    )
+    return  ( correct_predictions / dataset.shape[0] ) * 100
