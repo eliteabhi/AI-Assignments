@@ -5,13 +5,13 @@ name = "pypi"
 
 [packages]
 pandas = "*"
-matplotlib = "*"
 numpy = "*"
 keras = "*"
 tensorflow = {extras = ["and-cuda"], version = "~=2.18.0"}
 torch = ">=2.1.0"
 torchvision = ">=0.16.0"
 jax = {extras = ["cpu"], version = "*"}
+matplotlib = "*"
 
 [dev-packages]
 ipykernel = "*"
